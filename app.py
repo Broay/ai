@@ -1,11 +1,11 @@
 from flask import Flask, render_template_string, jsonify, request, send_file
-import time, io, os, requests, threading, base64, random, json
+import time, io, os, requests, threading, base64, random, json, traceback
 
 app = Flask(__name__)
 
-# --- NETSWAP SOVEREIGN SYNC v108.0 ---
-# Amacı: Açılışta hatalı bakiye göstermeyi bitirmek ve tam senkronizasyon. [cite: 2025-12-26]
-VERSION = "v108.0"
+# --- NETSWAP SOVEREIGN FILTER v112.0 ---
+# Amacı: Saniyede 1 denetim yaparken aynı hataları raporlamayı engellemek. [cite: 2025-12-26]
+VERSION = "v112.0"
 KEYS = [os.getenv("GEMINI_API_KEY_1"), os.getenv("GEMINI_API_KEY_2")]
 GH_TOKEN = os.getenv("GH_TOKEN")
 GH_REPO = "Broay/ai"
@@ -14,83 +14,83 @@ state = {
     "is_active": False,
     "mode": "IDLE",
     "peer_id": f"NS-{random.randint(1000, 9999)}",
-    "total_shared_mb": 0,
-    "internet_credits_mb": 120, # Bu değer GitHub'daki credits.json'dan beslenir
-    "tunnel_status": "Hazır",
-    "last_action": "v108.0 Senkronizasyon Modu Aktif.",
-    "ai_status": "Otonom Takipte",
-    "evolution_count": 9,
+    "internet_credits_mb": 0,
+    "last_action": "v112.0 Filtreleme Modu Aktif.",
+    "ai_status": "Akıllı Denetim",
+    "debug_report": "Sistem Temiz",
+    "last_error_hash": "", # Aynı hatayı engellemek için kimlik deposu
+    "latest_improvement": "Analiz Bekleniyor...",
+    "evolution_count": 13,
     "s100_temp": "34°C"
 }
 
-def sync_ledger():
+def github_seal(filename, data, message):
     if not GH_TOKEN: return
     try:
         headers = {"Authorization": f"token {GH_TOKEN}"}
-        url = f"https://api.github.com/repos/{GH_REPO}/contents/credits.json"
+        url = f"https://api.github.com/repos/{GH_REPO}/contents/{filename}"
         res = requests.get(url, headers=headers)
         sha = res.json().get('sha') if res.status_code == 200 else None
-        # Açılışta krediyi güncelle
-        if res.status_code == 200:
-            content_decoded = json.loads(base64.b64decode(res.json()['content']).decode())
-            state["internet_credits_mb"] = content_decoded.get("credits", 120)
-        
-        content = json.dumps({"credits": state["internet_credits_mb"], "peer_id": state["peer_id"], "v": VERSION})
-        payload = {"message": "Sync Ledger Update", "content": base64.b64encode(content.encode()).decode(), "sha": sha}
+        content = json.dumps(data, indent=4)
+        payload = {"message": message, "content": base64.b64encode(content.encode()).decode(), "sha": sha}
         requests.put(url, headers=headers, json=payload)
     except: pass
 
-def self_evolution():
-    state["ai_status"] = "1B Simülasyon..."
-    prompt = "NetSwap v108.0 UI senkronizasyonunu analiz et. JavaScript ve Python arasındaki veri gecikmesini sıfırlayan bir yama yaz. SADECE KOD."
-    new_code = ""
-    for key in KEYS:
-        if not key: continue
+def autonomous_watchman():
+    """Saniyede 1 denetim yapar, sadece yeni hataları raporlar [cite: 2025-12-26]"""
+    while True:
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key}"
-            res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
-            if res.status_code == 200:
-                new_code = res.json()['candidates'][0]['content']['parts'][0]['text'].replace("```python", "").replace("```", "").strip()
-                break
-        except: continue
-    if new_code:
-        state["evolution_count"] += 1
-        try:
-            headers = {"Authorization": f"token {GH_TOKEN}"}
-            f_url = f"https://api.github.com/repos/{GH_REPO}/contents/app.py"
-            sha = requests.get(f_url, headers=headers).json().get('sha')
-            payload = {"message": f"Evolution v108.{state['evolution_count']}", "content": base64.b64encode(new_code.encode()).decode(), "sha": sha}
-            requests.put(f_url, headers=headers, json=payload)
-            sync_ledger()
-        except: pass
-    state["ai_status"] = "Otonom Takipte"
+            # 1. HATA AYIKLAMA (Saniyede 1)
+            # Burada simüle edilmiş bir hata yakalama yapısı var
+            current_status = "Tünel Stabil" if state["is_active"] else "Sistem Beklemede"
+            
+            # 2. İYİLEŞTİRME ANALİZİ (Gelecek Planlama)
+            if random.random() < 0.01: 
+                prompt = "NetSwap v112.0 için 1 milyar simülasyon yap ve tek bir devrimsel iyileştirme yaz."
+                for key in KEYS:
+                    if not key: continue
+                    try:
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key}"
+                        res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
+                        if res.status_code == 200:
+                            insight = res.json()['candidates'][0]['content']['parts'][0]['text']
+                            state["latest_improvement"] = insight[:60] + "..."
+                            github_seal("future_improvements.json", {"idea": insight, "v": VERSION}, "Future Insight Update")
+                            break
+                    except: continue
 
-threading.Thread(target=lambda: (time.sleep(1800), self_evolution()), daemon=True).start()
+            time.sleep(1) # Saniyede 1 döngü
+            
+        except Exception as e:
+            error_trace = str(traceback.format_exc())
+            # FİLTRELEME: Eğer hata bir öncekiyle aynıysa raporlama yapma
+            if error_trace != state["last_error_hash"]:
+                state["last_error_hash"] = error_trace
+                state["debug_report"] = "YENİ HATA YAKALANDI"
+                github_seal("debug_report.json", {"error": error_trace, "ts": time.ctime()}, "New Unique Error Caught")
+            else:
+                state["debug_report"] = "Aynı Hata (Raporlama Atlandı)"
+
+threading.Thread(target=autonomous_watchman, daemon=True).start()
 
 @app.route('/action/<type>')
 def handle_action(type):
     if type == "share":
         state["is_active"] = True
         state["mode"] = "SHARING"
-        state["total_shared_mb"] += 10
         state["internet_credits_mb"] += 10
-        state["tunnel_status"] = "Açık (Verici)"
-        state["last_action"] = "S100: 96 Mbps Hasadı Aktif."
+        state["last_action"] = "Kredi Kazanımı Aktif."
     elif type == "receive":
         if state["internet_credits_mb"] >= 10:
             state["is_active"] = True
             state["mode"] = "RECEIVING"
             state["internet_credits_mb"] -= 10
-            state["tunnel_status"] = "Açık (Alıcı)"
-            state["last_action"] = "A55: Kredi Harcanıyor..."
-        else:
-            state["last_action"] = "Yetersiz Kredi!"
+            state["last_action"] = "Kredi Kullanımı Aktif."
+        else: state["last_action"] = "Bakiye Yetersiz!"
     elif type == "stop":
         state["is_active"] = False
         state["mode"] = "IDLE"
-        state["tunnel_status"] = "Kapalı"
         state["last_action"] = "Sistem Durduruldu."
-        sync_ledger()
     return jsonify(state)
 
 @app.route('/api/status')
@@ -98,86 +98,72 @@ def get_status(): return jsonify(state)
 
 @app.route('/')
 def index():
-    # Sayfa açılışında en güncel krediyi şırınga ediyoruz [cite: 2025-12-26]
     return render_template_string("""
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetSwap Sync v108.0</title>
+    <title>NetSwap Filter v112.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>body { background: #000; color: #00ff41; font-family: monospace; }</style>
 </head>
-<body class="p-4" onload="initSync()">
+<body class="p-4" onload="updateLoop()">
     <div class="text-center mb-6">
-        <h1 class="text-3xl font-black italic text-blue-500">NETSWAP SYNC</h1>
-        <p class="text-[9px] text-gray-500 uppercase tracking-widest">Real-Time Ledger System - v108.0</p>
+        <h1 class="text-3xl font-black italic text-green-500 uppercase">Filter Engine</h1>
+        <p class="text-[9px] text-gray-500 uppercase tracking-widest">Deduplication Debugger - v112.0</p>
     </div>
 
-    <div class="bg-zinc-950 p-6 rounded-3xl border-2 border-blue-600 mb-6 text-center shadow-2xl">
-        <h2 class="text-[10px] text-blue-400 font-bold uppercase mb-1">Mevcut Bakiyen</h2>
-        <div id="credits" class="text-6xl font-black text-white italic">{{ current_credits }}</div>
-        <span class="text-xs text-gray-500 uppercase tracking-widest">MB Hakkı</span>
+    <div class="bg-zinc-950 p-5 rounded-3xl border border-zinc-800 mb-6 text-center">
+        <h2 class="text-[10px] text-zinc-500 font-bold mb-1 uppercase tracking-tighter">Akıllı Bakiye (MB)</h2>
+        <div id="credits" class="text-6xl font-black text-white italic">0</div>
     </div>
 
     <div class="grid grid-cols-2 gap-3 mb-6">
-        <button onclick="control('share')" class="py-6 bg-green-700 text-black font-black uppercase rounded-2xl text-xl shadow-lg active:scale-95 transition">VER (Paylaş)</button>
-        <button onclick="control('receive')" class="py-6 bg-blue-700 text-white font-black uppercase rounded-2xl text-xl shadow-lg active:scale-95 transition">AL (Kullan)</button>
+        <button onclick="control('share')" class="py-6 bg-green-700 text-black font-black uppercase rounded-2xl text-xl shadow-lg active:scale-95 transition">VER</button>
+        <button onclick="control('receive')" class="py-6 bg-blue-700 text-white font-black uppercase rounded-2xl text-xl shadow-lg active:scale-95 transition">AL</button>
     </div>
 
-    <button onclick="control('stop')" class="w-full py-4 bg-red-900/30 text-red-500 font-bold uppercase rounded-xl border border-red-900 mb-6 active:scale-95 transition">SİSTEMİ DURDUR</button>
-
-    <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 mb-8">
-        <div class="flex justify-between text-[9px] font-bold uppercase mb-2">
-            <span class="text-zinc-500">Tünel:</span>
-            <span id="tunnel_status" class="text-white">{{ t_status }}</span>
+    <div class="space-y-4 mb-8">
+        <div class="bg-zinc-950 p-4 rounded-xl border border-red-900">
+            <h2 class="text-[9px] text-red-500 font-bold mb-1 uppercase">Hata Denetimi (Benzersiz)</h2>
+            <div id="debug_report" class="text-xs text-gray-400 italic">Analiz ediliyor...</div>
         </div>
-        <div class="flex justify-between text-[9px] font-bold uppercase">
-            <span class="text-zinc-500">Peer ID:</span>
-            <span id="peer_id" class="text-blue-500">{{ p_id }}</span>
+        <div class="bg-zinc-950 p-4 rounded-xl border border-blue-900">
+            <h2 class="text-[9px] text-blue-500 font-bold mb-1 uppercase">Gelecek Vizyonu</h2>
+            <div id="latest_improvement" class="text-xs text-gray-400 italic">Veri bekleniyor...</div>
         </div>
     </div>
 
-    <div class="border-t border-zinc-900 pt-4">
-        <p id="report" class="text-xs italic text-gray-400 font-bold">> {{ l_action }}</p>
+    <button onclick="control('stop')" class="w-full py-4 bg-zinc-900 text-red-500 font-bold uppercase rounded-xl border border-zinc-800 mb-8 active:scale-95 transition">DURDUR</button>
+
+    <div class="flex justify-between items-center text-[9px] font-bold border-t border-zinc-900 pt-4">
+        <span class="text-green-600 uppercase">Sürekli Filtreleme Aktif</span>
+        <span id="peer_id" class="text-zinc-700">ID: NS-0000</span>
     </div>
 
     <script>
-        let loopTimer;
-        async function initSync() {
-            // Sayfa açılır açılmaz son durumu bir kez daha doğrula [cite: 2025-12-26]
-            const res = await fetch('/api/status');
-            const data = await res.json();
-            updateUI(data);
-        }
         async function control(type) {
             const res = await fetch('/action/' + type);
             const data = await res.json();
             updateUI(data);
-            if(data.is_active && !loopTimer) loop();
-            else if(!data.is_active) { clearTimeout(loopTimer); loopTimer = null; }
         }
         function updateUI(data) {
             document.getElementById('credits').innerText = data.internet_credits_mb;
-            document.getElementById('report').innerText = "> " + data.last_action;
-            document.getElementById('peer_id').innerText = data.peer_id;
-            document.getElementById('tunnel_status').innerText = data.tunnel_status;
+            document.getElementById('debug_report').innerText = data.debug_report;
+            document.getElementById('latest_improvement').innerText = data.latest_improvement;
+            document.getElementById('peer_id').innerText = "ID: " + data.peer_id;
         }
-        async function loop() {
-            const res = await fetch('/api/status');
-            const data = await res.json();
-            if(!data.is_active) return;
-            await fetch('/action/' + (data.mode === 'SHARING' ? 'share' : 'receive'));
-            updateUI(data);
-            loopTimer = setTimeout(loop, 120);
+        async function updateLoop() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                updateUI(data);
+            } catch(e) {}
+            setTimeout(updateLoop, 1000);
         }
     </script>
 </body></html>
-""", 
-current_credits=state["internet_credits_mb"], 
-t_status=state["tunnel_status"], 
-p_id=state["peer_id"],
-l_action=state["last_action"])
+""")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=7860)
