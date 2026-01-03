@@ -1,0 +1,9 @@
+name: Overlord APK Build
+on: [push] 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Trigger
+        run: echo "Sovereign Executive v91.0 Paketleme Başlatıldı..."
