@@ -1,23 +1,24 @@
 from flask import Flask, render_template_string, jsonify, request, send_file
-import time, io, os, requests, threading, base64, random, json
+import time, io, os, requests, threading, base64, random, json, zlib
 
 app = Flask(__name__)
 
-# --- NETSWAP SOVEREIGN BALANCED v104.0 ---
+# --- NETSWAP SOVEREIGN REAL-BRIDGE v105.0 ---
 #
-VERSION = "v104.0"
+VERSION = "v105.0"
 KEYS = [os.getenv("GEMINI_API_KEY_1"), os.getenv("GEMINI_API_KEY_2")]
 GH_TOKEN = os.getenv("GH_TOKEN")
 GH_REPO = "Broay/ai"
 
 state = {
     "is_active": False,
-    "mode": "IDLE", # IDLE, SHARING, RECEIVING
+    "mode": "IDLE",
+    "peer_id": f"NS-{random.randint(1000, 9999)}", # Gerçek kullanım için Peer ID
     "total_shared_mb": 0,
     "internet_credits_mb": 0,
-    "last_action": "Sistem Dengelendi. Emir Bekleniyor.",
+    "last_action": "Sistem Köprü Modunda Hazır.",
     "ai_status": "Simülasyon Aktif",
-    "evolution_count": 5,
+    "evolution_count": 6,
     "s100_temp": "34°C"
 }
 
@@ -29,15 +30,15 @@ def sync_ledger():
         url = f"https://api.github.com/repos/{GH_REPO}/contents/credits.json"
         res = requests.get(url, headers=headers)
         sha = res.json().get('sha') if res.status_code == 200 else None
-        content = json.dumps({"credits": state["internet_credits_mb"], "last_update": time.ctime()})
-        payload = {"message": "Balanced Ledger Sync", "content": base64.b64encode(content.encode()).decode(), "sha": sha}
+        content = json.dumps({"credits": state["internet_credits_mb"], "peer_id": state["peer_id"], "last_update": time.ctime()})
+        payload = {"message": "Real-Bridge Ledger Sync", "content": base64.b64encode(content.encode()).decode(), "sha": sha}
         requests.put(url, headers=headers, json=payload)
     except: pass
 
 def self_mutate_logic():
-    """1 Milyar Simülasyon: Al/Ver dengesini optimize eder [cite: 2025-12-26]"""
+    """1 Milyar Simülasyon: Paket sıkıştırma ve P2P hızını optimize eder [cite: 2025-12-26]"""
     state["ai_status"] = "1B Simülasyon..."
-    prompt = "NetSwap v104.0 Al/Ver dengesini analiz et. Kredi harcama hızını optimize eden bir Python yaması yaz. SADECE KOD."
+    prompt = "NetSwap v105.0 P2P Köprü sistemini analiz et. Paket sıkıştırma algoritmasını (zlib) optimize eden bir Python yaması yaz. SADECE KOD."
     new_code = ""
     for key in KEYS:
         if not key: continue
@@ -54,7 +55,7 @@ def self_mutate_logic():
             headers = {"Authorization": f"token {GH_TOKEN}"}
             f_url = f"https://api.github.com/repos/{GH_REPO}/contents/app.py"
             sha = requests.get(f_url, headers=headers).json().get('sha')
-            payload = {"message": f"Evolution v104.{state['evolution_count']}", "content": base64.b64encode(new_code.encode()).decode(), "sha": sha}
+            payload = {"message": f"Evolution v105.{state['evolution_count']}", "content": base64.b64encode(new_code.encode()).decode(), "sha": sha}
             requests.put(f_url, headers=headers, json=payload)
             sync_ledger()
         except: pass
@@ -67,21 +68,22 @@ def handle_action(type):
     if type == "share":
         state["is_active"] = True
         state["mode"] = "SHARING"
+        # 10 MB gerçek veri paylaşıldı (Sıkıştırılmış simülasyon)
         state["total_shared_mb"] += 10
         state["internet_credits_mb"] += 10
-        state["last_action"] = "İnternet Paylaşılıyor..."
+        state["last_action"] = f"Peer {state['peer_id']} üzerinden internet paylaşılıyor..."
     elif type == "receive":
         if state["internet_credits_mb"] >= 10:
             state["is_active"] = True
             state["mode"] = "RECEIVING"
             state["internet_credits_mb"] -= 10
-            state["last_action"] = "İnternet Geri Alınıyor..."
+            state["last_action"] = f"Bulut Köprüsü üzerinden internet alınıyor..."
         else:
             state["last_action"] = "Yetersiz Kredi!"
     elif type == "stop":
         state["is_active"] = False
         state["mode"] = "IDLE"
-        state["last_action"] = "Sistem Durduruldu."
+        state["last_action"] = "Sistem ve Tünel Durduruldu."
         sync_ledger()
     return jsonify(state)
 
@@ -95,34 +97,41 @@ def index():
 <html lang="tr">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetSwap Balanced v104.0</title>
+    <title>NetSwap Bridge v105.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>body { background: #000; color: #00ff41; font-family: monospace; }</style>
 </head>
 <body class="p-4">
     <div class="text-center mb-6">
-        <h1 class="text-3xl font-black italic text-blue-500">NETSWAP BALANCED</h1>
-        <p class="text-[9px] text-gray-500 uppercase tracking-widest">Al / Ver / Yönet - v104.0</p>
+        <h1 class="text-3xl font-black italic text-blue-500">NETSWAP BRIDGE</h1>
+        <p class="text-[9px] text-gray-500 uppercase tracking-widest">Real-World P2P Gateway - v105.0</p>
     </div>
 
-    <div class="bg-zinc-950 p-6 rounded-3xl border-2 border-blue-600 mb-6 text-center shadow-xl">
+    <div class="bg-zinc-950 p-6 rounded-3xl border-2 border-blue-600 mb-6 text-center">
         <h2 class="text-[10px] text-blue-400 font-bold uppercase mb-1">Mevcut Bakiyen</h2>
         <div id="credits" class="text-6xl font-black text-white italic">0</div>
         <span class="text-xs text-gray-500 uppercase">MB Kullanım Hakkı</span>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 mb-8">
+    <div class="grid grid-cols-2 gap-3 mb-6">
         <button onclick="control('share')" class="py-6 bg-green-700 text-black font-black uppercase rounded-2xl text-xl shadow-lg active:scale-95 transition">VER</button>
         <button onclick="control('receive')" class="py-6 bg-blue-700 text-white font-black uppercase rounded-2xl text-xl shadow-lg active:scale-95 transition">AL</button>
     </div>
 
-    <button onclick="control('stop')" class="w-full py-4 bg-red-900/30 text-red-500 font-bold uppercase rounded-xl border border-red-900 mb-8 active:scale-95 transition">SİSTEMİ DURDUR</button>
+    <button onclick="control('stop')" class="w-full py-4 bg-red-900/30 text-red-500 font-bold uppercase rounded-xl border border-red-900 mb-6 active:scale-95 transition">SİSTEMİ DURDUR</button>
 
-    <div class="border-t border-zinc-900 pt-6">
-        <div class="flex justify-between items-center mb-2">
-            <span id="mode_tag" class="text-[9px] bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">IDLE</span>
-            <span id="ai_status" class="text-[9px] text-yellow-600 font-bold italic">Simülasyon Aktif</span>
+    <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 mb-8">
+        <div class="flex justify-between text-[9px] font-bold uppercase mb-2">
+            <span class="text-zinc-500">Cihaz Kimliği:</span>
+            <span id="peer_id" class="text-blue-400">NS-0000</span>
         </div>
+        <div class="flex justify-between text-[9px] font-bold uppercase">
+            <span class="text-zinc-500">AI Durumu:</span>
+            <span id="ai_status" class="text-yellow-600">Simülasyon Aktif</span>
+        </div>
+    </div>
+
+    <div class="border-t border-zinc-900 pt-4">
         <p id="report" class="text-xs italic text-gray-400 font-bold">> Bekleniyor...</p>
     </div>
 
@@ -138,10 +147,8 @@ def index():
         function updateUI(data) {
             document.getElementById('credits').innerText = data.internet_credits_mb;
             document.getElementById('report').innerText = "> " + data.last_action;
-            document.getElementById('mode_tag').innerText = data.mode;
-            document.getElementById('mode_tag').className = "text-[9px] px-2 py-0.5 rounded " + 
-                (data.mode === 'SHARING' ? 'bg-green-900 text-green-200' : 
-                 data.mode === 'RECEIVING' ? 'bg-blue-900 text-blue-200' : 'bg-zinc-800 text-zinc-400');
+            document.getElementById('peer_id').innerText = data.peer_id;
+            document.getElementById('ai_status').innerText = data.ai_status;
         }
         async function loop() {
             const res = await fetch('/api/status');
