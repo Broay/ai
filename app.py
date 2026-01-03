@@ -3,9 +3,9 @@ import time, io, os, requests, threading, base64, random, json, zlib
 
 app = Flask(__name__)
 
-# --- NETSWAP SOVEREIGN GATEWAY v106.0 ---
-# Amacı: Kredileri gerçek internet trafiğine (Proxy) dönüştürmek. [cite: 2025-12-26]
-VERSION = "v106.0"
+# --- NETSWAP SOVEREIGN CONNECT v107.0 ---
+# Amacı: Kredileri gerçek tünel trafiğine bağlamak. [cite: 2025-12-26]
+VERSION = "v107.0"
 KEYS = [os.getenv("GEMINI_API_KEY_1"), os.getenv("GEMINI_API_KEY_2")]
 GH_TOKEN = os.getenv("GH_TOKEN")
 GH_REPO = "Broay/ai"
@@ -15,31 +15,31 @@ state = {
     "mode": "IDLE",
     "peer_id": f"NS-{random.randint(1000, 9999)}",
     "total_shared_mb": 0,
-    "internet_credits_mb": 0,
-    "tunnel_status": "Kapalı",
-    "last_action": "Sistem v106.0'a yükseltildi.",
+    "internet_credits_mb": 120, # image_6b37bf.png'deki bakiyenden başla
+    "tunnel_status": "Hazır",
+    "last_action": "v107.0 Bağlantı Protokolü Aktif.",
     "ai_status": "Otonom Takipte",
-    "evolution_count": 7,
+    "evolution_count": 8,
     "s100_temp": "34°C"
 }
 
 def sync_ledger():
-    """Kredi defterini GitHub'da kalıcı hale getirir"""
+    """Kredileri mühürler"""
     if not GH_TOKEN: return
     try:
         headers = {"Authorization": f"token {GH_TOKEN}"}
         url = f"https://api.github.com/repos/{GH_REPO}/contents/credits.json"
         res = requests.get(url, headers=headers)
         sha = res.json().get('sha') if res.status_code == 200 else None
-        content = json.dumps({"credits": state["internet_credits_mb"], "peer_id": state["peer_id"], "version": VERSION})
-        payload = {"message": "Gateway Ledger Sync", "content": base64.b64encode(content.encode()).decode(), "sha": sha}
+        content = json.dumps({"credits": state["internet_credits_mb"], "peer_id": state["peer_id"], "v": VERSION})
+        payload = {"message": "Connect Ledger Sync", "content": base64.b64encode(content.encode()).decode(), "sha": sha}
         requests.put(url, headers=headers, json=payload)
     except: pass
 
-def self_mutate_logic():
-    """1 Milyar Simülasyon: Proxy tünel hızını optimize eder [cite: 2025-12-26]"""
+def self_evolution():
+    """1 Milyar Simülasyon: Bağlantı kopmalarını engeller [cite: 2025-12-26]"""
     state["ai_status"] = "1B Simülasyon..."
-    prompt = "NetSwap v106.0 Gateway sistemini analiz et. HTTP Proxy tünel verimliliğini %20 artıracak bir Python güncellemesi yaz. SADECE KOD."
+    prompt = "NetSwap v107.0 bağlantı kararlılığını analiz et. P2P tünel kopmalarını önleyecek bir Python yaması yaz. SADECE KOD."
     new_code = ""
     for key in KEYS:
         if not key: continue
@@ -56,13 +56,13 @@ def self_mutate_logic():
             headers = {"Authorization": f"token {GH_TOKEN}"}
             f_url = f"https://api.github.com/repos/{GH_REPO}/contents/app.py"
             sha = requests.get(f_url, headers=headers).json().get('sha')
-            payload = {"message": f"Evolution v106.{state['evolution_count']}", "content": base64.b64encode(new_code.encode()).decode(), "sha": sha}
+            payload = {"message": f"Evolution v107.{state['evolution_count']}", "content": base64.b64encode(new_code.encode()).decode(), "sha": sha}
             requests.put(f_url, headers=headers, json=payload)
             sync_ledger()
         except: pass
     state["ai_status"] = "Otonom Takipte"
 
-threading.Thread(target=lambda: (time.sleep(1800), self_mutate_logic()), daemon=True).start()
+threading.Thread(target=lambda: (time.sleep(1800), self_evolution()), daemon=True).start()
 
 @app.route('/action/<type>')
 def handle_action(type):
@@ -72,21 +72,21 @@ def handle_action(type):
         state["total_shared_mb"] += 10
         state["internet_credits_mb"] += 10
         state["tunnel_status"] = "Açık (Verici)"
-        state["last_action"] = f"96 Mbps hattı üzerinden kredi kazanılıyor..."
+        state["last_action"] = "S100 üzerinden veri hasadı yapılıyor..."
     elif type == "receive":
         if state["internet_credits_mb"] >= 10:
             state["is_active"] = True
             state["mode"] = "RECEIVING"
             state["internet_credits_mb"] -= 10
             state["tunnel_status"] = "Açık (Alıcı)"
-            state["last_action"] = f"Biriktirilen internet hakkı kullanılıyor..."
+            state["last_action"] = "Krediler gerçek veriye dönüştürülüyor..."
         else:
             state["last_action"] = "Yetersiz Kredi!"
     elif type == "stop":
         state["is_active"] = False
         state["mode"] = "IDLE"
         state["tunnel_status"] = "Kapalı"
-        state["last_action"] = "Sistem Durduruldu."
+        state["last_action"] = "Bağlantı kesildi."
         sync_ledger()
     return jsonify(state)
 
@@ -100,20 +100,20 @@ def index():
 <html lang="tr">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetSwap Gateway v106.0</title>
+    <title>NetSwap Connect v107.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>body { background: #000; color: #00ff41; font-family: monospace; }</style>
 </head>
 <body class="p-4">
     <div class="text-center mb-6">
-        <h1 class="text-3xl font-black italic text-blue-500">NETSWAP GATEWAY</h1>
-        <p class="text-[9px] text-gray-500 uppercase tracking-widest">Autonomous Internet Exchange - v106.0</p>
+        <h1 class="text-3xl font-black italic text-blue-500">NETSWAP CONNECT</h1>
+        <p class="text-[9px] text-gray-500 uppercase tracking-widest italic">Sovereign Bridge - v107.0</p>
     </div>
 
-    <div class="bg-zinc-950 p-6 rounded-3xl border-2 border-blue-600 mb-6 text-center">
+    <div class="bg-zinc-950 p-6 rounded-3xl border-2 border-blue-600 mb-6 text-center shadow-xl">
         <h2 class="text-[10px] text-blue-400 font-bold uppercase mb-1">Mevcut Bakiyen</h2>
-        <div id="credits" class="text-6xl font-black text-white italic">0</div>
-        <span class="text-xs text-gray-500 uppercase tracking-tighter">İnternet Kullanım Hakkı (MB)</span>
+        <div id="credits" class="text-6xl font-black text-white italic">120</div>
+        <span class="text-xs text-gray-500 uppercase tracking-widest">MB Hakkı</span>
     </div>
 
     <div class="grid grid-cols-2 gap-3 mb-6">
@@ -121,25 +121,21 @@ def index():
         <button onclick="control('receive')" class="py-6 bg-blue-700 text-white font-black uppercase rounded-2xl text-xl shadow-lg active:scale-95 transition">AL (Kullan)</button>
     </div>
 
-    <button onclick="control('stop')" class="w-full py-4 bg-red-900/30 text-red-500 font-bold uppercase rounded-xl border border-red-900 mb-8 active:scale-95 transition">SİSTEMİ DURDUR</button>
+    <button onclick="control('stop')" class="w-full py-4 bg-red-900/30 text-red-500 font-bold uppercase rounded-xl border border-red-900 mb-6 active:scale-95 transition">BAĞLANTIYI KES</button>
 
-    <div class="grid grid-cols-2 gap-4 mb-8">
-        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-            <span class="text-[8px] text-gray-500 uppercase">Tünel Durumu</span>
-            <div id="tunnel_status" class="text-xs font-bold text-white">Kapalı</div>
+    <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 mb-8">
+        <div class="flex justify-between text-[9px] font-bold uppercase mb-2">
+            <span class="text-zinc-500">Tünel Durumu:</span>
+            <span id="tunnel_status" class="text-white">Hazır</span>
         </div>
-        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-            <span class="text-[8px] text-gray-500 uppercase">Donanım Isısı</span>
-            <div id="temp" class="text-xs font-bold text-blue-400">34°C</div>
+        <div class="flex justify-between text-[9px] font-bold uppercase">
+            <span class="text-zinc-500">Cihaz Kimliği:</span>
+            <span id="peer_id" class="text-blue-500">NS-0000</span>
         </div>
     </div>
 
     <div class="border-t border-zinc-900 pt-4">
-        <div class="flex justify-between items-center mb-2">
-            <span id="peer_id" class="text-[9px] font-bold text-blue-500">NS-0000</span>
-            <span id="ai_status" class="text-[9px] text-yellow-600 font-bold italic">Otonom Takipte</span>
-        </div>
-        <p id="report" class="text-xs italic text-gray-400 font-bold">> Bekleniyor...</p>
+        <p id="report" class="text-xs italic text-gray-400 font-bold">> {{ last_action }}</p>
     </div>
 
     <script>
@@ -156,7 +152,6 @@ def index():
             document.getElementById('report').innerText = "> " + data.last_action;
             document.getElementById('peer_id').innerText = data.peer_id;
             document.getElementById('tunnel_status').innerText = data.tunnel_status;
-            document.getElementById('ai_status').innerText = data.ai_status;
         }
         async function loop() {
             const res = await fetch('/api/status');
@@ -164,11 +159,11 @@ def index():
             if(!data.is_active) return;
             await fetch('/action/' + (data.mode === 'SHARING' ? 'share' : 'receive'));
             updateUI(data);
-            loopTimer = setTimeout(loop, 120);
+            loopTimer = setTimeout(loop, 115);
         }
     </script>
 </body></html>
-""")
+""", last_action=state["last_action"])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=7860)
