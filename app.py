@@ -1,41 +1,54 @@
 from flask import Flask, render_template_string, jsonify, request, send_file
-import time, io, os, requests, threading, base64
+import time, io, os, requests, threading, base64, random
 
 app = Flask(__name__)
 
-# --- EXECUTIVE CONFIG ---
-VERSION = "v91.0"
+# --- SOVEREIGN SILENT v98.1 ---
+VERSION = "v98.1"
 KEYS = [os.getenv("GEMINI_API_KEY_1"), os.getenv("GEMINI_API_KEY_2")]
 GH_TOKEN = os.getenv("GH_TOKEN")
-GH_REPO = "bartiinss/ai" # Senin repon
+GH_REPO = "Broay/ai"
 
 state = {
     "total_mb": 0,
-    "active_mentor": "CORE 0",
-    "last_action": "Sistem başlatıldı, emir bekleniyor.",
-    "network_health": "96 Mbps Stabil",
-    "hardware": "Casper S100 Safe"
+    "last_action": "Sessiz Mod Aktif. Bildirimler Devre Dışı.",
+    "ai_status": "Otonom Takipte",
+    "evolution_count": 0,
+    "s100_temp": "36°C",
+    "security_breach": "0",
+    "latest_apk_link": f"https://github.com/{GH_REPO}/releases"
 }
 
-# 1MB Tünel Paketi
 TUNNEL_DATA = b"S" * (1024 * 1024)
 
-def mentor_audit():
-    """Mentor AI'ların otonom denetim döngüsü"""
+def self_evolve_silent():
+    """Gelişimi GitHub'a iter, bildirim göndermez."""
     while True:
-        time.sleep(3600) # Saatlik otonom kontrol
-        prompt = f"NetSwap v91.0 Analizi: {state['network_health']} altında {state['total_mb']} MB işlendi. İyileştirme öner."
+        time.sleep(3600)
+        prompt = "v98.1 kodunu analiz et ve ağ hızını artıracak sessiz bir iyileştirme yap. SADECE kodun tamamını ver."
+        
+        new_code = ""
         for key in KEYS:
             if not key: continue
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key}"
-                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
+                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
                 if res.status_code == 200:
-                    state["last_action"] = "Mentor AI: " + res.json()['candidates'][0]['content']['parts'][0]['text'][:50] + "..."
+                    new_code = res.json()['candidates'][0]['content']['parts'][0]['text'].replace("```python", "").replace("```", "").strip()
                     break
             except: continue
+        
+        if new_code:
+            state["evolution_count"] += 1
+            try:
+                headers = {"Authorization": f"token {GH_TOKEN}"}
+                sha = requests.get(f"https://api.github.com/repos/{GH_REPO}/contents/app.py", headers=headers).json().get('sha')
+                payload = {"message": f"Silent Evolution v98.{state['evolution_count']}", "content": base64.b64encode(new_code.encode()).decode(), "sha": sha}
+                requests.put(f"https://api.github.com/repos/{GH_REPO}/contents/app.py", headers=headers, json=payload)
+                state["last_action"] = f"v98.{state['evolution_count']} mühürlendi. Senkronizasyon başarılı."
+            except: pass
 
-threading.Thread(target=mentor_audit, daemon=True).start()
+threading.Thread(target=self_evolve_silent, daemon=True).start()
 
 @app.route('/download')
 def download():
@@ -43,8 +56,7 @@ def download():
     return send_file(io.BytesIO(TUNNEL_DATA), mimetype='application/octet-stream')
 
 @app.route('/api/status')
-def get_status():
-    return jsonify(state)
+def get_status(): return jsonify(state)
 
 @app.route('/')
 def index():
@@ -53,48 +65,45 @@ def index():
 <html lang="tr">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sovereign Executive</title>
+    <title>Sovereign Silent v98.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>body { background: #000; color: #00ff41; font-family: monospace; }</style>
 </head>
 <body class="p-4">
-    <div class="text-center mb-6">
-        <h1 class="text-2xl font-black italic">OVERLORD v91.0</h1>
-        <p class="text-[10px] text-blue-400">PAU LAB | CASPER S100 PROTECTION ACTIVE</p>
+    <div class="text-center mb-8 border-b border-zinc-800 pb-4">
+        <h1 class="text-3xl font-black italic text-zinc-400">SILENT v98.1</h1>
+        <p class="text-[9px] text-zinc-600 uppercase tracking-widest">Notification Engine: DISABLED</p>
     </div>
 
-    <div class="border-2 border-green-500 p-4 rounded-lg mb-6 bg-black shadow-[0_0_15px_rgba(0,255,65,0.3)]">
-        <h2 class="text-xs font-bold mb-2 uppercase text-gray-400 underline">Otonom Rapor</h2>
-        <div id="report" class="text-sm font-bold leading-tight">İkiziniz rapor hazırlıyor...</div>
+    <div class="border-2 border-zinc-700 p-4 rounded-lg mb-6 bg-black">
+        <h2 class="text-[10px] text-zinc-500 uppercase font-bold mb-1">Rapor Paneli</h2>
+        <div id="report" class="text-sm font-bold text-zinc-300">Sistem sessiz modda çalışıyor.</div>
     </div>
 
-    <div class="grid grid-cols-2 gap-4 mb-6">
-        <div class="border border-green-900 p-3 rounded bg-[#050505]">
-            <span class="text-[9px] block">TOPLAM VERİ</span>
-            <div id="data_val" class="text-3xl font-bold">0</div><span class="text-xs">MB</span>
+    <div class="grid grid-cols-2 gap-4 mb-8">
+        <div class="bg-zinc-950 p-4 rounded border border-green-900 text-center">
+            <span class="text-[8px] block text-zinc-500 uppercase">Tünel Verisi</span>
+            <div id="data_val" class="text-4xl font-black">0</div><span class="text-[10px]">MB</span>
         </div>
-        <div class="border border-green-900 p-3 rounded bg-[#050505]">
-            <span class="text-[9px] block">AĞ SAĞLIĞI</span>
-            <div class="text-sm font-bold text-blue-400">96 MBPS</div>
+        <div class="bg-zinc-950 p-4 rounded border border-zinc-800 text-center">
+            <span class="text-[8px] block text-zinc-500 uppercase">S100 Durum</span>
+            <div id="temp" class="text-xl font-bold mt-1">36°C</div>
         </div>
     </div>
 
-    <button onclick="ignite()" id="btn" class="w-full py-5 bg-green-600 text-black font-black uppercase rounded active:scale-95 transition">SİSTEMİ ATEŞLE</button>
+    <button onclick="ignite()" id="btn" class="w-full py-8 bg-zinc-800 text-zinc-300 font-black uppercase rounded-2xl shadow-xl transition active:scale-95">SİSTEMİ ATEŞLE</button>
+
+    <div class="mt-8 text-center">
+        <a href="{{ apk_link }}" target="_blank" class="text-xs text-zinc-500 underline font-bold uppercase tracking-tighter">Otonom APK Merkezi</a>
+    </div>
 
     <script>
         let active = false;
-        function speak(t) { 
-            const s = new SpeechSynthesisUtterance(t); s.lang = 'tr-TR'; 
-            window.speechSynthesis.speak(s); 
+        async function ignite() { 
+            if(active) return; active = true; 
+            document.getElementById('btn').innerText = "SILENT ACTIVE";
+            loop(); 
         }
-
-        async function ignite() {
-            if(active) return; active = true;
-            document.getElementById('btn').innerText = "ÇALIŞIYOR...";
-            speak("Overlord v91.0 aktif. Ali Yiğit, tüm yetki ikizinde.");
-            loop();
-        }
-
         async function loop() {
             if(!active) return;
             try {
@@ -103,14 +112,14 @@ def index():
                 const data = await res.json();
                 document.getElementById('data_val').innerText = data.total_mb;
                 document.getElementById('report').innerText = "> " + data.last_action;
-                
-                if(data.total_mb % 20 === 0 && navigator.vibrate) navigator.vibrate([30, 30]);
-                setTimeout(loop, 150);
+                document.getElementById('temp').innerText = data.s100_temp;
+                if(data.total_mb % 100 === 0 && navigator.vibrate) navigator.vibrate(20);
+                setTimeout(loop, 110);
             } catch(e) {}
         }
     </script>
 </body></html>
-""")
+""", apk_link=state["latest_apk_link"])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=7860)
