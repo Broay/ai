@@ -1,2 +1,2 @@
-Evrim Döngüsü 2: 
+Evrim Döngüsü 3: 
 96 Mbps hattı için paket buffer boyutu optimize edildi.
