@@ -4,44 +4,42 @@ from threading import Lock
 
 app = Flask(__name__)
 
-# --- NETSWAP SOVEREIGN LINK-FIXER v130.0 ---
-# Amacı: 404 hatalarını aşmak için Direct Link Injection ve Overlord Fix. [cite: 2026-01-03]
-VERSION = "v130.0"
+# --- NETSWAP SOVEREIGN VAULT v131.0 ---
+# Vizyon: Gizli tetikleyici, A55 parmak izi ve PIN korumalı Hükümdar Kasası. [cite: 2026-01-03]
+VERSION = "v131.0"
 KEYS = [os.getenv("GEMINI_API_KEY_1"), os.getenv("GEMINI_API_KEY_2")]
 GH_TOKEN = os.getenv("GH_TOKEN")
 GH_REPO = "Broay/ai"
 ADMIN_KEY = "ali_yigit_overlord_A55" 
+ADMIN_PIN = "1907" # Örnek PIN, bunu kendine göre değiştirebilirsin [cite: 2026-01-03]
 
 transaction_lock = Lock()
 state = {
     "is_active": False,
     "mode": "IDLE",
     "peer_id": f"NS-{random.randint(1000, 9999)}",
-    "internet_credits_mb": 120.0, # Bakiyen image_6b37bf'den mühürlendi
+    "internet_credits_mb": 120.0,
     "actual_mbps": 0.0,
     "last_op_time": time.perf_counter(),
-    "ai_status": "Link Onarıldı",
+    "ai_status": "Vault Koruması Aktif",
     "global_lock": False,
-    "banned_peers": [],
-    "evolution_count": 30,
+    "evolution_count": 31,
     "s100_temp": "34°C"
 }
 
-def github_seal(filename, data, message):
-    if not GH_TOKEN: return
-    try:
-        headers = {"Authorization": f"token {GH_TOKEN}"}
-        url = f"https://api.github.com/repos/{GH_REPO}/contents/{filename}"
-        res = requests.get(url, headers=headers)
-        sha = res.json().get('sha') if res.status_code == 200 else None
-        content = json.dumps(data, indent=4)
-        payload = {"message": message, "content": base64.b64encode(content.encode()).decode(), "sha": sha}
-        requests.put(url, headers=headers, json=payload)
-    except: pass
+def check_admin_auth(req):
+    """Hem anahtarı hem de A55 cihaz kimliğini doğrular"""
+    user_agent = req.headers.get('User-Agent', '')
+    key = req.args.get('key')
+    pin = req.args.get('pin')
+    # Sadece A55 ve doğru anahtarlar geçebilir [cite: 2026-01-03]
+    if key == ADMIN_KEY and pin == ADMIN_PIN and "SM-A556B" in user_agent:
+        return True
+    return False
 
 @app.route('/overlord_api/<action>')
 def admin_api(action):
-    if request.args.get('key') != ADMIN_KEY: return "ERİŞİM REDDEDİLDİ", 403
+    if not check_admin_auth(request): return "YETKİSİZ ERİŞİM", 403
     with transaction_lock:
         if action == "lock": state["global_lock"] = not state["global_lock"]
         elif action == "gift": state["internet_credits_mb"] += 100.0
@@ -49,36 +47,39 @@ def admin_api(action):
 
 @app.route('/overlord')
 def overlord_panel():
-    if request.args.get('key') != ADMIN_KEY: return "Admin Key Hatası", 403
+    if not check_admin_auth(request): return "Hükümdar Kimliği Doğrulanamadı", 403
     return render_template_string("""
 <!DOCTYPE html>
-<html lang="tr"><head><meta charset="UTF-8"><title>Overlord v130</title>
+<html lang="tr"><head><meta charset="UTF-8"><title>Vault v131</title>
 <script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-black text-red-500 p-6 font-monospace">
-    <div class="border border-red-900 p-4 rounded-xl mb-6">
-        <h1 class="text-xl font-black">HÜKÜMDAR KONSOLU</h1>
-        <p class="text-[8px]">BAKİYE: <span id="c" class="text-white">...</span> MB</p>
+<body class="bg-black text-red-500 p-6 font-mono">
+    <div class="border-2 border-red-900 p-4 rounded-3xl mb-6 bg-red-950/20 shadow-[0_0_30px_rgba(255,0,0,0.1)]">
+        <h1 class="text-xl font-black italic">SOVEREIGN VAULT</h1>
+        <p class="text-[9px] text-zinc-500">MÜHÜRLÜ ERİŞİM: SAMSUNG A55</p>
     </div>
-    <button onclick="f('gift')" class="w-full py-3 bg-green-900 text-white font-bold rounded mb-2">100 MB EKLE</button>
-    <button onclick="f('lock')" class="w-full py-3 bg-red-900 text-white font-bold rounded">GLOBAL KİLİT</button>
+    <div class="bg-zinc-900 p-6 rounded-2xl mb-4 text-center">
+        <div id="c" class="text-4xl font-black text-white italic">...</div>
+        <p class="text-[10px] text-zinc-600 uppercase mt-2">Güncel Bakiye</p>
+    </div>
+    <button onclick="f('gift')" class="w-full py-4 bg-green-800 text-white font-black rounded-xl mb-3 shadow-lg">100 MB KREDİ EKLE</button>
+    <button onclick="f('lock')" class="w-full py-4 bg-red-800 text-white font-black rounded-xl shadow-lg">GLOBAL SİSTEM KİLİDİ</button>
     <script>
-        const k = "{{ a_key }}";
-        async function f(a){ await fetch(`/overlord_api/${a}?key=${k}`); }
+        const k = "{{ a_key }}"; const p = "{{ a_pin }}";
+        async function f(a){ await fetch(`/overlord_api/${a}?key=${k}&pin=${p}`); }
         async function u(){
-            const r = await fetch('/api/status');
-            const d = await r.json();
-            document.getElementById('c').innerText = d.internet_credits_mb.toFixed(2);
-            setTimeout(u, 2000);
+            const r = await fetch('/api/status'); const d = await r.json();
+            document.getElementById('c').innerText = d.internet_credits_mb.toFixed(2) + " MB";
+            setTimeout(u, 1500);
         } u();
     </script>
 </body></html>
-""", a_key=ADMIN_KEY)
+""", a_key=ADMIN_KEY, a_pin=ADMIN_PIN)
 
 @app.route('/action/<type>')
 def handle_action(type):
     now = time.perf_counter()
     with transaction_lock:
-        if state["global_lock"] and type != "stop": return jsonify({"error": "LOCKED"}), 423
+        if state["global_lock"] and type != "stop": return jsonify({"error": "SYSTEM LOCKED"}), 423
         dt = now - state["last_op_time"]
         state["last_op_time"] = now
         state["actual_mbps"] = round(random.uniform(5.0, 98.0), 2)
@@ -90,7 +91,6 @@ def handle_action(type):
             state["internet_credits_mb"] = max(0, round(state["internet_credits_mb"] - (state["actual_mbps"]/8)*dt, 6))
         elif type == "stop":
             state["is_active"], state["mode"] = False, "IDLE"
-            github_seal("credits.json", {"credits": state["internet_credits_mb"]}, "Final Seal v130")
     return jsonify(state)
 
 @app.route('/api/status')
@@ -103,33 +103,40 @@ def index():
 <html lang="tr">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetSwap Hub v130</title>
+    <title>NetSwap Hub v131</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>body { background: #000; color: #00ff41; font-family: monospace; }</style>
 </head>
 <body class="p-4" onload="mainLoop()">
-    <div class="text-center mb-8">
+    <div class="text-center mb-10">
         <h1 class="text-3xl font-black italic text-blue-500 uppercase">NETSWAP HUB</h1>
-        <p class="text-[9px] text-zinc-600">PAÜ Programcılık - v130.0</p>
+        <p class="text-[9px] text-zinc-600 tracking-widest">Sovereign Node v131.0</p>
     </div>
 
-    <div class="bg-zinc-950 p-10 rounded-3xl border-2 border-zinc-900 mb-8 text-center">
-        <div id="credits" class="text-7xl font-black text-white italic">0.00</div>
-        <span class="text-[10px] text-zinc-700 uppercase">DOĞRULANMIŞ REZERV</span>
+    <div class="bg-zinc-950 p-12 rounded-[40px] border-2 border-zinc-900 mb-10 text-center shadow-2xl">
+        <div id="credits" class="text-7xl font-black text-white italic tracking-tighter">0.00</div>
+        <span class="text-[10px] text-zinc-700 font-bold uppercase mt-4 block">GÜVENLİ REZERV (MB)</span>
     </div>
 
-    <div class="grid grid-cols-2 gap-4 mb-8">
-        <button onclick="control('share')" class="py-8 bg-green-700 text-black font-black rounded-2xl text-2xl active:scale-95 transition">VER</button>
-        <button onclick="control('receive')" class="py-8 bg-blue-700 text-white font-black rounded-2xl text-2xl active:scale-95 transition">AL</button>
+    <div class="grid grid-cols-2 gap-4 mb-10">
+        <button onclick="control('share')" class="py-10 bg-green-700 text-black font-black rounded-3xl text-3xl active:scale-90 transition shadow-xl">VER</button>
+        <button onclick="control('receive')" class="py-10 bg-blue-700 text-white font-black rounded-3xl text-3xl active:scale-90 transition shadow-xl">AL</button>
     </div>
 
-    <button onclick="control('stop')" class="w-full py-4 bg-zinc-900 text-red-500 font-bold rounded-xl border border-zinc-800 mb-20 text-xs">DURDUR</button>
-
-    <div class="text-center opacity-20 hover:opacity-100 transition">
-        <a href="/overlord?key={{ a_key }}" class="text-[9px] text-zinc-800 font-bold uppercase tracking-widest underline">Hükümdar Girişi</a>
-    </div>
+    <div id="secretSpot" onclick="triggerAdmin()" class="fixed bottom-0 right-0 w-20 h-20 opacity-0 cursor-default"></div>
 
     <script>
+        let clickCount = 0;
+        function triggerAdmin() {
+            clickCount++;
+            if(clickCount >= 5) {
+                const pin = prompt("HÜKÜMDAR PIN KODUNU GİRİN:");
+                if(pin) window.location.href = `/overlord?key={{ a_key }}&pin=` + pin;
+                clickCount = 0;
+            }
+            setTimeout(() => { clickCount = 0; }, 3000);
+        }
+
         async function control(type) { await fetch('/action/' + type); }
         async function mainLoop() {
             try {
